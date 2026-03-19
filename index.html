@@ -5,92 +5,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPPU AI Animator</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; text-align: center; padding: 50px; }
-        .container { background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
-        .input-group { margin-bottom: 20px; text-align: left; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; }
-        input { width: 95%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        button { background-color: #ff9900; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; width: 100%; margin-top: 10px;}
-        button:hover { background-color: #e68a00; }
-        #story-box { margin-top: 30px; padding: 20px; border-left: 5px solid #ff9900; background-color: #fafafa; display: none; text-align: left; }
-        #speakBtn { background-color: #007bff; margin-top: 15px; }
-        #speakBtn:hover { background-color: #0056b3; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; text-align: center; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0px 10px 30px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; color: #444; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { background-color: #ff9900; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; transition: 0.3s; }
+        button:hover { background-color: #e68a00; transform: translateY(-2px); }
+        #story-box { margin-top: 25px; padding: 20px; border-left: 5px solid #ff9900; background-color: #fffaf0; display: none; text-align: left; border-radius: 4px; }
+        #speakBtn { background-color: #007bff; margin-top: 15px; font-size: 16px; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>🎓 SPPU AI Animator</h1>
-        <p>Generate AI-animated explanations for your syllabus.</p>
+        <p>Generative AI explanations for your syllabus.</p>
         
         <div class="input-group">
-            <label for="topicInput">Syllabus Topic:</label>
-            <input type="text" id="topicInput" placeholder="e.g., Binary Trees, Queues, Paging">
+            <label>Syllabus Topic:</label>
+            <input type="text" id="topicInput" placeholder="e.g., Stack, Binary Tree">
         </div>
 
         <div class="input-group">
-            <label for="characterInput">AI Character:</label>
-            <input type="text" id="characterInput" placeholder="e.g., Ram the Cat, Rohit the Robot">
+            <label>AI Character:</label>
+            <input type="text" id="characterInput" placeholder="e.g., Ram the Cat">
         </div>
         
         <button onclick="getStoryFromAWS()">Generate Custom Story</button>
         
         <div id="story-box">
             <h2 id="story-title">Loading...</h2>
-            <p id="story-text">Please wait while we connect to the cloud...</p>
+            <p id="story-text">Please wait...</p>
             <button id="speakBtn" style="display:none;" onclick="speakStory()">🔊 Listen to Story</button>
         </div>
     </div>
 
     <script>
-        let currentStoryText = "";
+        let currentStory = "";
 
         async function getStoryFromAWS() {
-            // 🚨 PASTE YOUR AWS FUNCTION URL HERE! 🚨
+            // 🚨 PASTE YOUR AWS FUNCTION URL BELOW 🚨
             const awsUrl = "https://gc7wzz5vx4smd7ab2hhlf3kpey0cxyjx.lambda-url.us-east-1.on.aws/";
             
-            const userTopic = document.getElementById('topicInput').value;
-            const userCharacter = document.getElementById('characterInput').value;
+            const topic = document.getElementById('topicInput').value;
+            const character = document.getElementById('characterInput').value;
 
-            // UI Reset
             document.getElementById('story-box').style.display = "block";
             document.getElementById('story-title').innerText = "Connecting to AWS...";
-            document.getElementById('story-text').innerText = "Asking Gemini to write your story...";
+            document.getElementById('story-text').innerText = "Generating your story...";
             document.getElementById('speakBtn').style.display = "none";
 
             try {
-                // Formatting URL with Query Parameters
-                const fullUrl = `${awsUrl}?topic=${encodeURIComponent(userTopic)}&character=${encodeURIComponent(userCharacter)}`;
-
+                const fullUrl = `${awsUrl}?topic=${encodeURIComponent(topic)}&character=${encodeURIComponent(character)}`;
                 const response = await fetch(fullUrl);
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                // 🛠️ THE LOOP-BREAKER: We parse twice to be 100% sure we get an object
+                let data = await response.json();
+                if (typeof data === "string") {
+                    data = JSON.parse(data);
                 }
-
-                const data = await response.json();
                 
-                // Success! Populate the UI
-                currentStoryText = data.animation_script;
+                currentStory = data.animation_script || "AI response was empty.";
                 document.getElementById('story-title').innerText = `${data.character} teaches ${data.topic}`;
-                document.getElementById('story-text').innerText = currentStoryText;
+                document.getElementById('story-text').innerText = currentStory;
                 document.getElementById('speakBtn').style.display = "block";
-
             } catch (error) {
-                console.error("Fetch Error:", error);
+                console.error("Error:", error);
                 document.getElementById('story-title').innerText = "Connection Failed";
-                document.getElementById('story-text').innerText = "Error: " + error.message + ". Check AWS logs and CORS settings.";
+                document.getElementById('story-text').innerText = "Make sure your AWS URL is correct and Timeout is 30s.";
             }
         }
 
-        // TEXT-TO-SPEECH FUNCTION
         function speakStory() {
-            if ('speechSynthesis' in window && currentStoryText !== "") {
-                const utterance = new SpeechSynthesisUtterance(currentStoryText);
-                utterance.rate = 0.9; // Slightly slower for better explanation
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop current speech
+                const utterance = new SpeechSynthesisUtterance(currentStory);
+                utterance.rate = 0.9;
                 window.speechSynthesis.speak(utterance);
-            } else {
-                alert("Sorry, your browser doesn't support speech synthesis.");
             }
         }
     </script>
