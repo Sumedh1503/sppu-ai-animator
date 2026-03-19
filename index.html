@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPPU AI Animator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; text-align: center; padding: 50px; }
+        .container { background-color: white; padding: 40px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        input { width: 95%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        button { background-color: #ff9900; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; width: 100%; margin-top: 10px;}
+        button:hover { background-color: #e68a00; }
+        #story-box { margin-top: 30px; padding: 20px; border-left: 5px solid #ff9900; background-color: #fafafa; display: none; text-align: left; }
+        #speakBtn { background-color: #007bff; margin-top: 15px; }
+        #speakBtn:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🎓 SPPU AI Animator</h1>
+        <p>Generate AI-animated explanations for your syllabus.</p>
+        
+        <div class="input-group">
+            <label for="topicInput">Syllabus Topic:</label>
+            <input type="text" id="topicInput" placeholder="e.g., Binary Trees, Queues, Paging">
+        </div>
+
+        <div class="input-group">
+            <label for="characterInput">AI Character:</label>
+            <input type="text" id="characterInput" placeholder="e.g., Ram the Cat, Rohit the Robot">
+        </div>
+        
+        <button onclick="getStoryFromAWS()">Generate Custom Story</button>
+        
+        <div id="story-box">
+            <h2 id="story-title">Loading...</h2>
+            <p id="story-text">Please wait while we connect to the cloud...</p>
+            <button id="speakBtn" style="display:none;" onclick="speakStory()">🔊 Listen to Story</button>
+        </div>
+    </div>
+
+    <script>
+        let currentStoryText = "";
+
+        async function getStoryFromAWS() {
+            // 🚨 PASTE YOUR AWS FUNCTION URL HERE! 🚨
+            const awsUrl = "https://gc7wzz5vx4smd7ab2hhlf3kpey0cxyjx.lambda-url.us-east-1.on.aws/";
+            
+            const userTopic = document.getElementById('topicInput').value;
+            const userCharacter = document.getElementById('characterInput').value;
+
+            // UI Reset
+            document.getElementById('story-box').style.display = "block";
+            document.getElementById('story-title').innerText = "Connecting to AWS...";
+            document.getElementById('story-text').innerText = "Asking Gemini to write your story...";
+            document.getElementById('speakBtn').style.display = "none";
+
+            try {
+                // Formatting URL with Query Parameters
+                const fullUrl = `${awsUrl}?topic=${encodeURIComponent(userTopic)}&character=${encodeURIComponent(userCharacter)}`;
+
+                const response = await fetch(fullUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Success! Populate the UI
+                currentStoryText = data.animation_script;
+                document.getElementById('story-title').innerText = `${data.character} teaches ${data.topic}`;
+                document.getElementById('story-text').innerText = currentStoryText;
+                document.getElementById('speakBtn').style.display = "block";
+
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                document.getElementById('story-title').innerText = "Connection Failed";
+                document.getElementById('story-text').innerText = "Error: " + error.message + ". Check AWS logs and CORS settings.";
+            }
+        }
+
+        // TEXT-TO-SPEECH FUNCTION
+        function speakStory() {
+            if ('speechSynthesis' in window && currentStoryText !== "") {
+                const utterance = new SpeechSynthesisUtterance(currentStoryText);
+                utterance.rate = 0.9; // Slightly slower for better explanation
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Sorry, your browser doesn't support speech synthesis.");
+            }
+        }
+    </script>
+
+</body>
+</html>
